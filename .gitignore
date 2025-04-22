@@ -1,0 +1,33 @@
+# Archivos de build
+build/
+*.bin
+*.elf
+*.map
+
+# Archivos de managed_components
+managed_components/
+
+# Configuraciones locales
+sdkconfig
+sdkconfig.old
+
+# VSCode settings
+.vscode/
+
+# Archivos de logs o temporales
+*.log
+*.pyc
+*.pyo
+*.swp
+.DS_Store
+Thumbs.db
+
+# Archivos generados por herramientas
+*.obj
+*.out
+
+# Archivos de backup
+*~
+
+# Ignorar archivos de blink
+!/blink/
