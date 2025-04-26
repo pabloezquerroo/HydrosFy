@@ -53,6 +53,9 @@
 #include "protocol_examples_common.h"
 #include "errno.h"
 
+#include "esp_adc/adc_oneshot.h"
+#include "esp_log.h"
+
 #if CONFIG_EXAMPLE_CONNECT_WIFI
 #include "esp_wifi.h"
 #endif
@@ -64,8 +67,7 @@
 #define BLINK_GPIO CONFIG_BLINK_GPIO
 #define TEMP_THRESHOLD CONFIG_TEMP_THRESHOLD
 
-#define TEMPERATURE_TIMEOUT 1000000
-#define PRINT_TIMEOUT 10000000
+#define HUMIDITY_TIMEOUT 1000000
 
 static char ota_write_data[BUFFSIZE + 1] = {0};
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
@@ -73,8 +75,15 @@ extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 
 #define OTA_URL_SIZE 256
 
-static uint8_t s_led_state = 0;
-static const char *TAG = "practica2";
+// * Sensor humedad
+#define SENSOR_ADC_CHANNEL ADC_CHANNEL_6 // GPIO34
+#define SENSOR_ADC_UNIT ADC_UNIT_1
+#define SENSOR_ATTEN ADC_ATTEN_DB_12
+
+adc_oneshot_unit_handle_t adc_handle;
+
+static const char *TAG = "node-sensor";
+
 i2c_dev_t dev;
 
 esp_mqtt_client_handle_t client;
@@ -329,16 +338,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        // msg_id = esp_mqtt_client_publish(client, "/topic/qos1", "data_3", 0, 1, 0);
-        // ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 
-        msg_id = esp_mqtt_client_subscribe(client, "/P-S/update", 0);
-        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-
-        // msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
-        // ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-
-        // msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
         // ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_DISCONNECTED:
@@ -347,7 +347,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
     case MQTT_EVENT_SUBSCRIBED:
         ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-        // msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
+
         // ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_UNSUBSCRIBED:
@@ -392,22 +392,7 @@ static void mqtt_app_start(void)
     esp_mqtt_client_start(client);
 }
 
-static void blink_led(void)
-{
-    gpio_set_level(BLINK_GPIO, s_led_state);
-}
-
-static void configure_led(void)
-{
-    ESP_LOGI(TAG, "configure_led init %d", BLINK_GPIO);
-    gpio_reset_pin(BLINK_GPIO);
-    /* Set the GPIO as a push/pull output */
-    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-    ESP_LOGI(TAG, "configure_led done");
-}
-
-static void temp_timer_callback(void *arg);
-static void print_timer_callback(void *arg);
+static void humidity_timer_callback(void *arg);
 
 void app_main(void)
 {
@@ -427,70 +412,55 @@ void app_main(void)
     ESP_ERROR_CHECK(example_connect());
 
     mqtt_app_start();
+    // * MQTT Setup done
 
-    // * Led Setup
-    configure_led();
-    float temperature = 0.0;
-
-    // * Temp si7021 Setup
-    ESP_ERROR_CHECK(i2cdev_init());
-    memset(&dev, 0, sizeof(i2c_dev_t));
-    ESP_ERROR_CHECK(si7021_init_desc(&dev, 0, CONFIG_EXAMPLE_I2C_MASTER_SDA, CONFIG_EXAMPLE_I2C_MASTER_SCL));
+    float humidity = 0.0;
 
     // * Timers Setup
-    const esp_timer_create_args_t temp_timer_args = {
-        .callback = &temp_timer_callback,
-        .name = "temperature_timer",
-        .arg = &temperature};
+    const esp_timer_create_args_t humidity_timer_args = {
+        .callback = &humidity_timer_callback,
+        .name = "humidity_timer",
+        .arg = &humidity};
 
-    const esp_timer_create_args_t print_timer_args = {
-        .callback = &print_timer_callback,
-        .name = "print_timer",
-        .arg = &temperature};
+    // * ADC Setup
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = SENSOR_ADC_UNIT,
+    };
+    ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config, &adc_handle));
+
+    adc_oneshot_chan_cfg_t config = {
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+        .atten = SENSOR_ATTEN,
+    };
+    ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_handle, SENSOR_ADC_CHANNEL, &config));
+    // * ADC Setup done
 
     // * Create the timers
-    esp_timer_handle_t temp_timer;
-    ESP_ERROR_CHECK(esp_timer_create(&temp_timer_args, &temp_timer));
-
-    esp_timer_handle_t print_timer;
-    ESP_ERROR_CHECK(esp_timer_create(&print_timer_args, &print_timer));
+    esp_timer_handle_t humidity_timer;
+    ESP_ERROR_CHECK(esp_timer_create(&humidity_timer_args, &humidity_timer));
 
     // * Start the timers
-    ESP_ERROR_CHECK(esp_timer_start_periodic(temp_timer, TEMPERATURE_TIMEOUT));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(print_timer, PRINT_TIMEOUT));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(humidity_timer, HUMIDITY_TIMEOUT));
     ESP_LOGI(TAG, "Started timers, time since boot: %lld us", esp_timer_get_time());
 
-    /* Let the timer run for a little bit more */
-    usleep(5000000000);
-
     /* Clean up and finish the example */
-    ESP_ERROR_CHECK(esp_timer_stop(temp_timer));
-    ESP_ERROR_CHECK(esp_timer_delete(temp_timer));
-    ESP_ERROR_CHECK(esp_timer_stop(print_timer));
-    ESP_ERROR_CHECK(esp_timer_delete(print_timer));
-    ESP_LOGI(TAG, "Stopped and deleted timers");
+    // ESP_ERROR_CHECK(esp_timer_stop(humidity_timer));
+    // ESP_ERROR_CHECK(esp_timer_delete(humidity_timer));
+
+    // ESP_LOGI(TAG, "Stopped and deleted timers");
 }
 
-static void temp_timer_callback(void *arg)
+static void humidity_timer_callback(void *arg)
 {
-    esp_err_t res;
-    float *temperature = (float *)arg;
-    res = si7021_measure_temperature(&dev, temperature);
-    if (res != ESP_OK)
-        printf("Could not measure temperature: %d (%s)\n", res, esp_err_to_name(res));
+    int raw = 0;
+    ESP_ERROR_CHECK(adc_oneshot_read(adc_handle, SENSOR_ADC_CHANNEL, &raw));
+    ESP_LOGI(TAG, "Lectura cruda del sensor: %d", raw);
 
-    s_led_state = (*temperature > TEMP_THRESHOLD);
-    blink_led();
-}
+    int moisture_percentage = (100 - ((raw / 4095.0) * 100));
+    ESP_LOGI(TAG, "Humedad del suelo: %d%%", moisture_percentage);
 
-static void print_timer_callback(void *arg)
-{
-    float *temperature = (float *)arg;
-    printf("Temperature: %.2f\n", *temperature);
-
-    char *temp_str = (char *)malloc(8);
-
-    snprintf(temp_str, 8, "%.2f", *temperature);
-    int msg_id = esp_mqtt_client_publish(client, "/P-S/sensors/temp", temp_str, 0, 1, 0);
+    char *humidity_str = (char *)malloc(8);
+    snprintf(humidity_str, 8, "%d", moisture_percentage);
+    int msg_id = esp_mqtt_client_publish(client, "/hidrosfy/sensors/humidity", humidity_str, 0, 1, 0);
     ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
 }
