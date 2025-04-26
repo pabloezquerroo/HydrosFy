@@ -30,4 +30,4 @@ Thumbs.db
 *~
 
 # Ignorar archivos de blink
-!/blink/
+!/node-sensor/
