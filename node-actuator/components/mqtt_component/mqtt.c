@@ -4,6 +4,7 @@
 #include "protocol_examples_common.h"
 // #include "nvs.h"
 #include "nvs_flash.h"
+#include "app_state.h"
 
 #if CONFIG_EXAMPLE_CONNECT_WIFI
 #include "esp_wifi.h"
@@ -21,6 +22,8 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
     {
     case MQTT_EVENT_CONNECTED:
         // ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        int msg_id = esp_mqtt_client_subscribe(client, "/P-S/sensors/humidity", 1);
+        ESP_LOGI("mqtt_event", "Subscribed to /P-S/sensors/humidity, msg_id=%d", msg_id);
 
         // ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
         break;
@@ -43,10 +46,18 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
         // ESP_LOGI(TAG, "MQTT_EVENT_DATA");
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
-        if (strncmp(event->topic, "/P-S/update", event->topic_len) == 0)
+        if (strncmp(event->topic, "/P-S/updates/actuator", event->topic_len) == 0)
         {
             printf("PRE ota_example_task\r\n");
             // xTaskCreate(&ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
+        }
+        else if (strncmp(event->topic, "/P-S/sensors/humidity", event->topic_len) == 0)
+        {
+            char buffer[32] = {0};
+            snprintf(buffer, sizeof(buffer), "%.*s", event->data_len, event->data);
+            float value = strtof(buffer, NULL);
+            set_humidity(value);
+            set_humidity_processed(false);
         }
         break;
     case MQTT_EVENT_ERROR:

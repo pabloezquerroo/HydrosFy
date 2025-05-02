@@ -5,6 +5,12 @@ menu "custom config"
       default 11
       help
         Blink GPIO
+  
+  config HUMIDITY_THRESHOLD
+      int "HUMIDITY THRESHOLD"
+      default 50
+      help
+        Minimum humidity threshold to trigger servo
 
   config TEMP_THRESHOLD
       int "Min Temperature Threshold"
