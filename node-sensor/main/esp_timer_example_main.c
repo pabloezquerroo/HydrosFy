@@ -67,7 +67,7 @@
 #define BLINK_GPIO CONFIG_BLINK_GPIO
 #define TEMP_THRESHOLD CONFIG_TEMP_THRESHOLD
 
-#define HUMIDITY_TIMEOUT 3000000
+#define HUMIDITY_TIMEOUT 30000000
 
 static char ota_write_data[BUFFSIZE + 1] = {0};
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
@@ -83,6 +83,7 @@ extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 adc_oneshot_unit_handle_t adc_handle;
 
 static const char *TAG = "node-sensor";
+static const char *VERSION = "0.0.1";
 
 i2c_dev_t dev;
 
@@ -338,7 +339,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-
+        esp_mqtt_client_subscribe(client, "/hidrosfy/update/sensor", 1);
         // ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_DISCONNECTED:
@@ -365,6 +366,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             printf("PRE ota_example_task\r\n");
             xTaskCreate(&ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
         }
+        ESP_LOGI(TAG, "Version: %s\r\n", VERSION);
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
