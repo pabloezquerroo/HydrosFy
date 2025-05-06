@@ -20,7 +20,7 @@ menu "custom config"
 
   config BROKER_URL
     string "Broker URL"
-    default "mqtt://mqtt.eclipseprojects.io"
+    default "mqtt://test.mosquitto.org"
     help
         URL of the broker to connect to
 

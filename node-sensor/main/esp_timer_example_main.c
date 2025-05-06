@@ -67,7 +67,7 @@
 #define BLINK_GPIO CONFIG_BLINK_GPIO
 #define TEMP_THRESHOLD CONFIG_TEMP_THRESHOLD
 
-#define HUMIDITY_TIMEOUT 1000000
+#define HUMIDITY_TIMEOUT 3000000
 
 static char ota_write_data[BUFFSIZE + 1] = {0};
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
@@ -360,7 +360,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
-        if (strncmp(event->topic, "/P-S/update", event->topic_len) == 0)
+        if (strncmp(event->topic, "/hidrosfy/update/sensor", event->topic_len) == 0)
         {
             printf("PRE ota_example_task\r\n");
             xTaskCreate(&ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);

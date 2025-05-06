@@ -19,11 +19,9 @@ void set_servo_angle(uint8_t angle)
 
 // void servo_task(void *pvParameter)
 // {
-//     printf("🚀 Starting servo sweep task...\n");
-
 //     while (1)
 //     {
-//         printf("➡️  Sweeping from 0° to 180°\n");
+//         printf("Sweeping from 0° to 180°\n");
 //         for (int angle = 0; angle <= 180; angle += 10)
 //         {
 //             printf("Setting angle: %d°\n", angle);
@@ -31,7 +29,7 @@ void set_servo_angle(uint8_t angle)
 //             vTaskDelay(pdMS_TO_TICKS(500));
 //         }
 
-//         printf("⬅️  Sweeping from 180° to 0°\n");
+//         printf("Sweeping from 180° to 0°\n");
 //         for (int angle = 180; angle >= 0; angle -= 10)
 //         {
 //             printf("Setting angle: %d°\n", angle);
@@ -39,7 +37,7 @@ void set_servo_angle(uint8_t angle)
 //             vTaskDelay(pdMS_TO_TICKS(500));
 //         }
 
-//         printf("✅ Completed one full sweep cycle\n");
+//         printf("Completed one full sweep cycle\n");
 //         vTaskDelay(pdMS_TO_TICKS(1000)); // pause between cycles
 //     }
 // }
@@ -53,8 +51,8 @@ void water_plant()
     }
     printf("Watering the plant...\n");
     set_servo_active(true);
-    set_servo_angle(90);             // Set servo to 90 degrees for watering
-    vTaskDelay(pdMS_TO_TICKS(2000)); // Water for 2 seconds
+    set_servo_angle(180);            // Set servo to 90 degrees for watering
+    vTaskDelay(pdMS_TO_TICKS(4000)); // Water for 2 seconds
     set_servo_angle(0);              // Reset servo to 0 degrees
     printf("Watering complete.\n");
     set_servo_active(false);
