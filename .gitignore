@@ -10,6 +10,7 @@ managed_components/
 # Configuraciones locales
 sdkconfig
 sdkconfig.old
+dependencies.lock
 
 # VSCode settings
 .vscode/
