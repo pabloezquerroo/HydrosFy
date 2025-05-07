@@ -43,7 +43,7 @@ static void infinite_loop(void)
     }
 }
 
-static void ota_example_task(void *pvParameter)
+void ota_example_task(void *pvParameter)
 {
     esp_err_t err;
     /* update handle : set by esp_ota_begin(), must be freed via esp_ota_end() */
