@@ -70,7 +70,7 @@ static void servo_timer_callback(void *arg)
 
     set_humidity_processed(true);
 
-    if (humidity <= 0.0 || humidity > 100.0)
+    if (humidity < 0.0 || humidity > 100.0)
     {
         printf("Invalid humidity value: %f\n", humidity);
         return;

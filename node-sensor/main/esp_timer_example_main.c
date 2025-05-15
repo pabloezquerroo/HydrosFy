@@ -458,8 +458,16 @@ static void humidity_timer_callback(void *arg)
     ESP_ERROR_CHECK(adc_oneshot_read(adc_handle, SENSOR_ADC_CHANNEL, &raw));
     ESP_LOGI(TAG, "Lectura cruda del sensor: %d", raw);
 
-    int moisture_percentage = (100 - ((raw / 4095.0) * 100));
+    int raw_air = 0;
+    int raw_water = 2800;
+    ESP_LOGI(TAG, "humedad raw: %d%%", raw);
+
+    int moisture_percentage = 100 * (raw_air - raw) / (raw_air - raw_water);
     ESP_LOGI(TAG, "Humedad del suelo: %d%%", moisture_percentage);
+
+
+    // int moisture_percentage = ((raw / 4095.0) * 100);
+    // ESP_LOGI(TAG, "Humedad del suelo: %d%%", moisture_percentage);
 
     char *humidity_str = (char *)malloc(8);
     snprintf(humidity_str, 8, "%d", moisture_percentage);
