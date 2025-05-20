@@ -1,6 +1,8 @@
 #include "app_state.h"
 #include <stdbool.h>
 
+// * Este componente es el encargado de almacenar el estado de la aplicacion
+
 static float humidity = 0.0;
 static bool is_humidity_processed_val = false;
 

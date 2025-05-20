@@ -14,7 +14,7 @@ menu "custom config"
 
   config BROKER_URL
     string "Broker URL"
-    default "mqtt://test.mosquitto.org"
+    default "mqtt://broker.hivemq.com"
     help
         URL of the broker to connect to
 

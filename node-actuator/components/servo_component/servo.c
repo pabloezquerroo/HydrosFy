@@ -8,6 +8,7 @@
 
 #define SERVO_TIMEOUT 1000000
 
+// * Calcula el pulso en microsegundos para el servo
 void set_servo_angle(uint8_t angle)
 {
     uint32_t duty_us = SERVO_MIN_US + (angle * (SERVO_MAX_US - SERVO_MIN_US)) / 180;
@@ -16,31 +17,6 @@ void set_servo_angle(uint8_t angle)
     ledc_set_duty(SERVO_MODE, SERVO_CHANNEL, duty);
     ledc_update_duty(SERVO_MODE, SERVO_CHANNEL);
 }
-
-// void servo_task(void *pvParameter)
-// {
-//     while (1)
-//     {
-//         printf("Sweeping from 0° to 180°\n");
-//         for (int angle = 0; angle <= 180; angle += 10)
-//         {
-//             printf("Setting angle: %d°\n", angle);
-//             set_servo_angle(angle);
-//             vTaskDelay(pdMS_TO_TICKS(500));
-//         }
-
-//         printf("Sweeping from 180° to 0°\n");
-//         for (int angle = 180; angle >= 0; angle -= 10)
-//         {
-//             printf("Setting angle: %d°\n", angle);
-//             set_servo_angle(angle);
-//             vTaskDelay(pdMS_TO_TICKS(500));
-//         }
-
-//         printf("Completed one full sweep cycle\n");
-//         vTaskDelay(pdMS_TO_TICKS(1000)); // pause between cycles
-//     }
-// }
 
 void water_plant()
 {
@@ -51,9 +27,9 @@ void water_plant()
     }
     printf("Watering the plant...\n");
     set_servo_active(true);
-    set_servo_angle(180);            // Set servo to 90 degrees for watering
-    vTaskDelay(pdMS_TO_TICKS(4000)); // Water for 2 seconds
-    set_servo_angle(0);              // Reset servo to 0 degrees
+    set_servo_angle(180);
+    vTaskDelay(pdMS_TO_TICKS(4000));
+    set_servo_angle(0);
     printf("Watering complete.\n");
     set_servo_active(false);
     vTaskDelete(NULL);
@@ -82,6 +58,7 @@ static void servo_timer_callback(void *arg)
     }
 }
 
+// * Configura el callback del servo
 void setup_servo()
 {
     ledc_timer_config_t ledc_timer = {

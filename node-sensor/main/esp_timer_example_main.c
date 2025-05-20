@@ -28,38 +28,12 @@
 #include "nvs_flash.h"
 #include "protocol_examples_common.h"
 #include "errno.h"
+#include "esp_adc/adc_oneshot.h"
 
 #include "mqtt_client.h"
 #if CONFIG_EXAMPLE_CONNECT_WIFI
 #include "esp_wifi.h"
 #endif
-
-// ----------
-#include <string.h>
-#include <inttypes.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
-#include "esp_event.h"
-#include "esp_log.h"
-#include "esp_ota_ops.h"
-#include "esp_app_format.h"
-#include "esp_http_client.h"
-#include "esp_flash_partitions.h"
-#include "esp_partition.h"
-#include "nvs.h"
-#include "nvs_flash.h"
-#include "driver/gpio.h"
-#include "protocol_examples_common.h"
-#include "errno.h"
-
-#include "esp_adc/adc_oneshot.h"
-#include "esp_log.h"
-
-#if CONFIG_EXAMPLE_CONNECT_WIFI
-#include "esp_wifi.h"
-#endif
-// ----------
 
 #define BUFFSIZE 1024
 #define HASH_LEN 32 /* SHA-256 digest length */
@@ -86,8 +60,11 @@ static const char *TAG = "node-sensor";
 static const char *VERSION = "0.0.1";
 
 i2c_dev_t dev;
-
 esp_mqtt_client_handle_t client;
+
+static void humidity_timer_callback(void *arg);
+
+// * funciones relacionadas a ota
 
 static void http_cleanup(esp_http_client_handle_t client)
 {
@@ -384,6 +361,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     }
 }
 
+// * Funciones relacionadas a mqtt
+
 static void mqtt_app_start(void)
 {
     esp_mqtt_client_config_t mqtt_cfg = {
@@ -393,8 +372,6 @@ static void mqtt_app_start(void)
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
     esp_mqtt_client_start(client);
 }
-
-static void humidity_timer_callback(void *arg);
 
 void app_main(void)
 {
@@ -444,12 +421,6 @@ void app_main(void)
     // * Start the timers
     ESP_ERROR_CHECK(esp_timer_start_periodic(humidity_timer, HUMIDITY_TIMEOUT));
     ESP_LOGI(TAG, "Started timers, time since boot: %lld us", esp_timer_get_time());
-
-    /* Clean up and finish the example */
-    // ESP_ERROR_CHECK(esp_timer_stop(humidity_timer));
-    // ESP_ERROR_CHECK(esp_timer_delete(humidity_timer));
-
-    // ESP_LOGI(TAG, "Stopped and deleted timers");
 }
 
 static void humidity_timer_callback(void *arg)
@@ -458,16 +429,13 @@ static void humidity_timer_callback(void *arg)
     ESP_ERROR_CHECK(adc_oneshot_read(adc_handle, SENSOR_ADC_CHANNEL, &raw));
     ESP_LOGI(TAG, "Lectura cruda del sensor: %d", raw);
 
+    // * Valores de referencia
     int raw_air = 0;
     int raw_water = 2800;
     ESP_LOGI(TAG, "humedad raw: %d%%", raw);
 
     int moisture_percentage = 100 * (raw_air - raw) / (raw_air - raw_water);
     ESP_LOGI(TAG, "Humedad del suelo: %d%%", moisture_percentage);
-
-
-    // int moisture_percentage = ((raw / 4095.0) * 100);
-    // ESP_LOGI(TAG, "Humedad del suelo: %d%%", moisture_percentage);
 
     char *humidity_str = (char *)malloc(8);
     snprintf(humidity_str, 8, "%d", moisture_percentage);

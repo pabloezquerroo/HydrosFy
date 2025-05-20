@@ -42,6 +42,7 @@ static void infinite_loop(void)
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }
+// * Función principal de OTA
 
 void ota_example_task(void *pvParameter)
 {

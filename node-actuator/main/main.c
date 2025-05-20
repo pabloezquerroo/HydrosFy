@@ -14,6 +14,9 @@ void app_main(void)
     // print name and version
     ESP_LOGI(TAG, "Starting %s version %s", TAG, VERSION);
 
+    // * Funcion principal del componente MQTT
     setup_mqtt();
+
+    // * Funcion principal del componente SERVO
     setup_servo();
 }
